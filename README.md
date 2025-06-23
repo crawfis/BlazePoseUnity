@@ -1,3 +1,11 @@
+#Refactor of Unity's Sample for BlazePose using Unity's Inference Engine
+Unity's sample for BlazePose used a single image. This expands that to a sequence of images, a video and a live webcam feed.
+To support these I rewrote the main code to use an Event architecture and separate the concerns of the model and the view in a 
+somewhat MVC framework. The final loops through these 3 types randomly as a stress test. It works fairly well on my PC with a nVidia card,
+but fails occasionally when changing the image source.
+
+Below is the original readme from Unity's sample.
+
 # BlazePose in Inference Engine
 
 BlazePose is a fast, light-weight hand detector from Google Research. Pretrained models are available as part of Google's [MediaPipe](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker) framework.
