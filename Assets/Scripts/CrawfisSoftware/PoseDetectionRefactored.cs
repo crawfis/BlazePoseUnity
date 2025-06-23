@@ -1,31 +1,19 @@
 ﻿using CrawfisSoftware;
+using CrawfisSoftware.EventManagement;
 
 using System;
 using System.Collections;
 using System.Threading.Tasks;
-
-using TMPro;
 
 using Unity.InferenceEngine;
 using Unity.Mathematics;
 
 using UnityEngine;
 
-using CrawfisSoftware.EventManagement;
-
-
-
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
-
-public class PoseDetectionFromVideo : MonoBehaviour
+public class PoseDetectionRefactored : MonoBehaviour
 {
-    //public VideoPlayer _videoPlayer;
-
     public ModelAsset poseDetector;
     public ModelAsset poseLandmarker;
-    public TextMeshPro skeletonCountTMP;
     public TextAsset anchorsCSV;
     public float scoreThreshold = 0.75f;
 
@@ -97,7 +85,6 @@ public class PoseDetectionFromVideo : MonoBehaviour
 
     private void OnImageUpdated(object sender, object textureObject)
     {
-
         Texture texture = textureObject as Texture;
         if (texture != null)
         {
@@ -277,7 +264,6 @@ public class PoseDetectionFromVideo : MonoBehaviour
             Vector3 position_WorldSpace = ImageToWorld(position_ImageSpace) + new Vector3(0, 0, landmarks[5 * i + 2] / m_TextureHeight);
             skeleton[i] = position_WorldSpace;
             isTracked[i] = visibility > 0.5f && presence > 0.5f;
-            //posePreview.SetKeypoint(i, visibility > 0.5f && presence > 0.5f, position_WorldSpace);
         }
         _skeletalData.isTracked = isTracked;
         _skeletalData.skeletalPositions = skeleton;
@@ -289,6 +275,7 @@ public class PoseDetectionFromVideo : MonoBehaviour
         // Cancel and await any running detection
         if (m_DetectAwaitable != null && !m_DetectAwaitable.IsCompleted)
         {
+            // Should never really get here unless OnDestroy is called while detection is running.
             try
             {
                 m_DetectAwaitable.Cancel();
@@ -300,11 +287,6 @@ public class PoseDetectionFromVideo : MonoBehaviour
             }
         }
         m_DetectAwaitable = null;
-
-        //m_PoseDetectorWorker?.Dispose(); m_PoseDetectorWorker = null;
-        //m_PoseLandmarkerWorker?.Dispose(); m_PoseLandmarkerWorker = null;
-        //m_DetectorInput?.Dispose(); m_DetectorInput = null;
-        //m_LandmarkerInput?.Dispose(); m_LandmarkerInput = null;
     }
 
     private void OnDestroy()
