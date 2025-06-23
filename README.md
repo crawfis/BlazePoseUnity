@@ -1,9 +1,36 @@
-#Refactor of Unity's Sample for BlazePose using Unity's Inference Engine
+# Refactor of Unity's Sample for BlazePose using Unity's Inference Engine
 Unity's sample for [BlazePose](https://github.com/Unity-Technologies/inference-engine-samples/tree/main/BlazeDetectionSample/Pose)
  used a single image. This expands that to a sequence of images, a video and a live webcam feed.
 To support these I rewrote the main code to use an Event architecture and separate the concerns of the model and the view in a 
 somewhat MVC framework. The final loops through these 3 types randomly as a stress test. It works fairly well on my PC with a nVidia card,
 but fails occasionally when changing the image source.
+
+## Project Structure and Architecture
+
+This project is organized to separate the core pose detection logic (model), the user interface and visualization (view), and 
+the control flow (controller) using an event-driven approach:
+
+- **Event System:**  
+  A custom event publisher (`EventsPublisherSimple`) is used to decouple components. Events like `"ImageUpdated"` 
+and `"Skeleton"` allow different parts of the system to communicate without direct dependencies.
+
+- **Controller:**  
+  The main controller logic is in `PoseDetectionRefactored.cs`. It subscribes to events, manages the detection loop, 
+and coordinates between the model and view. It handles switching between image sources (sequence, video, webcam) 
+and orchestrates the pose detection pipeline.
+
+- **Model:**  
+  The pose detection and landmark models are loaded and executed in the controller. The detection logic is 
+encapsulated in methods that prepare input tensors, run inference, and process results.
+
+- **View:**  
+  Visualization components like `Keypoint`, `KeypointLine`, and `BoundingBox` are responsible for rendering 
+detected poses and keypoints in the Unity scene. These scripts update their visuals based on data provided by the controller.
+
+- **Extensibility:**  
+  The event-driven design makes it easy to add new image sources or visualization methods by subscribing to relevant events.
+
+This structure improves maintainability, testability, and scalability compared to a monolithic approach.
 
 Below is the original readme from Unity's sample.
 
@@ -11,7 +38,7 @@ Below is the original readme from Unity's sample.
 
 BlazePose is a fast, light-weight hand detector from Google Research. Pretrained models are available as part of Google's [MediaPipe](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker) framework.
 
-![](../images/pose.jpg)
+![](https://github.com/Unity-Technologies/inference-engine-samples/blob/main/BlazeDetectionSample/images/pose.jpg)
 
 The BlazePose models have been converted from TFLite to ONNX for use in Inference Engine using [tf2onnx](https://github.com/onnx/tensorflow-onnx) with the default export parameters. Three variants of the landmarker model (lite, full, heavy) are provided which can be interchanged. The larger models may provide more accurate results but take longer to run.
 
@@ -88,4 +115,4 @@ The output tensor of the landmarker model is asynchronously downloaded and once 
 ## WebGPU
 Unity 6 supports access to the WebGPU backend in early access. Inference Engine has full support for running models on the web using the WebGPU backend. Discover how to gain early access and test WebGPU in our [graphics forum](https://discussions.unity.com/t/early-access-to-the-new-webgpu-backend-in-unity-2023-3/933493).
 
-![](../images/pose_webgpu.png)
+![](https://github.com/Unity-Technologies/inference-engine-samples/blob/main/BlazeDetectionSample/images/pose_webgpu.png)
