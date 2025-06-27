@@ -60,27 +60,59 @@ public class PoseDetectionRefactored : MonoBehaviour
         m_PoseDetectorModel = CreatePersonDetectorGraph();
         CreateSkeletalTracker();
         CreatePersonDetectorWorker();
+        _detectionCoroutine = StartCoroutine(StartDetecting());
+    }
+
+    void OnClose()
+    {
+        if (_detectionCoroutine != null) StopCoroutine(_detectionCoroutine);
+        _detectionCoroutine = null;
+        // Cancel and await any running detection
+        if (m_DetectAwaitable != null && !m_DetectAwaitable.IsCompleted)
+        {
+            // Should never really get here unless OnDestroy is called while detection is running.
+            try
+            {
+                m_DetectAwaitable.Cancel();
+                // Optionally, you could await here if OnClose was async, but in Unity MonoBehaviour it's not.
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"Exception during Awaitable.Cancel(): {ex.Message}");
+            }
+        }
+        m_DetectAwaitable = null;
+        m_PoseDetectorWorker?.Dispose(); m_PoseDetectorWorker = null;
+        m_PoseLandmarkerWorker?.Dispose(); m_PoseLandmarkerWorker = null;
+        m_DetectorInput?.Dispose(); m_DetectorInput = null;
+        m_LandmarkerInput?.Dispose(); m_LandmarkerInput = null;
     }
 
     private void OnImageSourceChanged(object sender, object eventData)
     {
-        if (_detectionCoroutine != null) StopCoroutine(_detectionCoroutine);
-        _detectionCoroutine = null;
+        //if (_detectionCoroutine != null) StopCoroutine(_detectionCoroutine);
+        //_detectionCoroutine = null;
         _textureUpdated = true;
         Debug.Log("Image source has been changed.");
-        _detectionCoroutine = StartCoroutine(StartDetecting());
+        //_detectionCoroutine = StartCoroutine(StartDetecting());
     }
 
     private IEnumerator StartDetecting()
     {
-        if (m_DetectAwaitable != null && !m_DetectAwaitable.IsCompleted)
-            m_DetectAwaitable.Cancel(); // Cancel any ongoing detection
-        m_DetectAwaitable = null;
-        yield return null;
-        yield return null;
+        int restartCount = 0;
+        while (true)
+        {
+            Debug.Log($"Starting Detection...Try #{restartCount++}...");
+            if (m_DetectAwaitable != null && !m_DetectAwaitable.IsCompleted)
+                m_DetectAwaitable.Cancel(); // Cancel any ongoing detection
+            m_DetectAwaitable = null;
+            yield return null;
+            yield return null;
 
-        var detectionLoopTask = RunDetectionLoop();
-        yield return new TaskYieldInstruction(detectionLoopTask);
+            var detectionLoopTask = RunDetectionLoop();
+            yield return new TaskYieldInstruction(detectionLoopTask);
+            _textureUpdated = true;
+        }
     }
 
     private void OnImageUpdated(object sender, object textureObject)
@@ -95,32 +127,39 @@ public class PoseDetectionRefactored : MonoBehaviour
 
     private async Task RunDetectionLoop()
     {
-        while (true)
-        //while (!Keyboard.current.escapeKey.wasPressedThisFrame)
+        try
         {
-            if (!_textureUpdated)
+            while (true)
+            //while (!Keyboard.current.escapeKey.wasPressedThisFrame)
             {
-                await Task.Yield(); // Wait for the next frame if no texture update
-                continue;
-            }
-            _textureUpdated = false;
-            try
-            {
-                //EventsPublisherSimple.Instance.PublishEvent("ImageUpdated", this, texture);
-                m_DetectAwaitable = Detect(_texture);
-                await m_DetectAwaitable;
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-            finally
-            {
-                m_DetectAwaitable = null; // Reset the awaitable after completion or cancellation
+                if (!_textureUpdated)
+                {
+                    await Task.Yield(); // Wait for the next frame if no texture update
+                    continue;
+                }
+                _textureUpdated = false;
+                try
+                {
+                    //EventsPublisherSimple.Instance.PublishEvent("ImageUpdated", this, texture);
+                    m_DetectAwaitable = Detect(_texture);
+                    await m_DetectAwaitable;
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                finally
+                {
+                    m_DetectAwaitable = null; // Reset the awaitable after completion or cancellation
+                }
             }
         }
-
-        OnClose();
+        catch (Exception ex)
+        {
+            Debug.LogError($"Pose detection loop encountered an error: {ex.Message}");
+            _textureUpdated = true;
+        }
+        //OnClose();
     }
 
     private void CreateSkeletalTracker()
@@ -270,31 +309,8 @@ public class PoseDetectionRefactored : MonoBehaviour
         EventsPublisherSimple.Instance.PublishEvent("Skeleton", this, _skeletalData);
     }
 
-    void OnClose()
-    {
-        // Cancel and await any running detection
-        if (m_DetectAwaitable != null && !m_DetectAwaitable.IsCompleted)
-        {
-            // Should never really get here unless OnDestroy is called while detection is running.
-            try
-            {
-                m_DetectAwaitable.Cancel();
-                // Optionally, you could await here if OnClose was async, but in Unity MonoBehaviour it's not.
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"Exception during Awaitable.Cancel(): {ex.Message}");
-            }
-        }
-        m_DetectAwaitable = null;
-    }
-
     private void OnDestroy()
     {
         OnClose();
-        m_PoseDetectorWorker?.Dispose(); m_PoseDetectorWorker = null;
-        m_PoseLandmarkerWorker?.Dispose(); m_PoseLandmarkerWorker = null;
-        m_DetectorInput?.Dispose(); m_DetectorInput = null;
-        m_LandmarkerInput?.Dispose(); m_LandmarkerInput = null;
     }
 }

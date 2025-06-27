@@ -23,6 +23,7 @@ public class WebcamAdaptor : MonoBehaviour
         {
             Debug.LogError("No webcam detected!");
         }
+        Debug.Log("WebcamAdaptor started.");
     }
     private void Update()
     {

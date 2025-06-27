@@ -31,11 +31,14 @@ namespace CrawfisSoftware
             _videoPlayer.errorReceived += OnVideoError;
             _videoPlayer.frameReady += OnFrameReady;
             _videoPlayer.Play();
+            Debug.Log("VideoPlayerAdaptor started.");
         }
 
         private void OnDisable()
         {
+            Debug.Log("VideoPlayerAdaptor Closing.");
             Close();
+            Debug.Log("VideoPlayerAdaptor Closed.");
         }
 
         private void OnFrameReady(VideoPlayer source, long frameIdx)

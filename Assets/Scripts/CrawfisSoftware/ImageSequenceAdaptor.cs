@@ -38,6 +38,7 @@ namespace CrawfisSoftware
 
         private IEnumerator PlayImageSequence()
         {
+            Debug.Log("ImageSequenceAdaptor started.");
             int imageIndex = 0;
             while (true)
             {
