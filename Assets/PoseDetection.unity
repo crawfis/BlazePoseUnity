@@ -391,7 +391,7 @@ VideoPlayer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 431552730}
   m_Enabled: 1
-  m_VideoClip: {fileID: 0}
+  m_VideoClip: {fileID: 32900000, guid: 94e8f8c5451de524f993e54476a1be58, type: 3}
   m_TargetCameraAlpha: 1
   m_TargetCamera3DLayout: 0
   m_TargetCamera: {fileID: 0}
@@ -401,7 +401,7 @@ VideoPlayer:
   m_TargetMaterialProperty: <noninit>
   m_RenderMode: 2
   m_AspectRatio: 2
-  m_DataSource: 1
+  m_DataSource: 0
   m_TimeUpdateMode: 2
   m_PlaybackSpeed: 0.77
   m_AudioOutputMode: 2
@@ -1382,7 +1382,7 @@ MonoBehaviour:
   poseDetector: {fileID: 5022602860645237092, guid: e30d99d4b5cbed1439961d20a00ea84b, type: 3}
   poseLandmarker: {fileID: 5022602860645237092, guid: 414916b2af2c16a49b64136c181ad542, type: 3}
   anchorsCSV: {fileID: 4900000, guid: 3e88456b82cc63d4b9237f1dc38bad6d, type: 3}
-  scoreThreshold: 0.75
+  scoreThreshold: 0.3
 --- !u!1 &1613802045
 GameObject:
   m_ObjectHideFlags: 0

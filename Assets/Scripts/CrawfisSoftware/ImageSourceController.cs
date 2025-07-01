@@ -24,7 +24,7 @@ namespace CrawfisSoftware
         {
             yield return new WaitForSeconds(0.2f);
             EnableImageSource();
-            StartCoroutine(RandomlyChangeImageSource());
+            //StartCoroutine(RandomlyChangeImageSource());
         }
 
         private IEnumerator RandomlyChangeImageSource()

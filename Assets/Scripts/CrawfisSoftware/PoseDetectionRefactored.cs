@@ -167,8 +167,8 @@ public class PoseDetectionRefactored : MonoBehaviour
         var poseLandmarkerModel = ModelLoader.Load(poseLandmarker);
         m_PoseLandmarkerWorker = new Worker(poseLandmarkerModel, BackendType.GPUCompute);
 
-        m_DetectorInput = new Tensor<float>(new TensorShape(1, detectorInputSize, detectorInputSize, 3));
-        m_LandmarkerInput = new Tensor<float>(new TensorShape(1, landmarkerInputSize, landmarkerInputSize, 3));
+        m_DetectorInput = new Tensor<float>(new TensorShape(1, detectorInputSize, detectorInputSize, 3)); // 1, 224, 224, 3
+        m_LandmarkerInput = new Tensor<float>(new TensorShape(1, landmarkerInputSize, landmarkerInputSize, 3));  // 1, 256, 256, 3
     }
 
     private void CreatePersonDetectorWorker()
@@ -282,6 +282,7 @@ public class PoseDetectionRefactored : MonoBehaviour
         EventsPublisherSimple.Instance.PublishEvent("FaceDetected", this, _faceBoundingBox);
         //ShowBoundingBoxes(faceWorldPosition, boundingBoxHeight, leftHipPosition, personDetectionRadius);
 
+        M2 = BlazeUtils.FitTextureToTensorMatrix(m_TextureWidth, m_TextureHeight, landmarkerInputSize);
         BlazeUtils.SampleImageAffine(texture, m_LandmarkerInput, M2);
         m_PoseLandmarkerWorker.Schedule(m_LandmarkerInput);
 
