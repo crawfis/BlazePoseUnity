@@ -30,6 +30,7 @@ namespace CrawfisSoftware
             _videoPlayer.prepareCompleted += OnVideoPrepared;
             _videoPlayer.errorReceived += OnVideoError;
             _videoPlayer.frameReady += OnFrameReady;
+            _videoPlayer.isLooping = true;
             _videoPlayer.Play();
             Debug.Log("VideoPlayerAdaptor started.");
         }

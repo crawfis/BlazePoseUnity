@@ -235,4 +235,23 @@ public static class BlazeUtils
 
         return anchors;
     }
+
+    public static Texture2D ToTexture2D(Texture texture)
+    {
+        if (texture is Texture2D tex2D)
+            return tex2D;
+
+        // Assume texture is a RenderTexture
+        RenderTexture currentRT = RenderTexture.active;
+        RenderTexture rt = texture as RenderTexture;
+        if (rt == null)
+            throw new ArgumentException("Texture must be Texture2D or RenderTexture");
+
+        Texture2D tex = new Texture2D(texture.width, texture.height, TextureFormat.RGBA32, false);
+        RenderTexture.active = rt;
+        tex.ReadPixels(new Rect(0, 0, texture.width, texture.height), 0, 0);
+        tex.Apply();
+        RenderTexture.active = currentRT;
+        return tex;
+    }
 }
