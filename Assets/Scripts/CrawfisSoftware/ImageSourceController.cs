@@ -18,20 +18,21 @@ namespace CrawfisSoftware
         [SerializeField] private WebcamAdaptor _webCamAdaptor;
         [SerializeField] private VideoPlayerAdaptor _videoPlayerAdaptor;
         [SerializeField] private ImageSequenceAdaptor _imageSequenceAdaptor;
+        [SerializeField] private bool _randomlyChange = false;
 
         private ImageSourceType _oldImageType;
         private IEnumerator Start()
         {
             yield return new WaitForSeconds(0.2f);
             EnableImageSource();
-            //StartCoroutine(RandomlyChangeImageSource());
+            if (_randomlyChange) StartCoroutine(RandomlyChangeImageSource());
         }
 
         private IEnumerator RandomlyChangeImageSource()
         {
             while (true)
             {
-                yield return new WaitForSeconds(Random.Range(3f, 4f));
+                yield return new WaitForSeconds(Random.Range(3f, 6f));
                 _imageSourceType = (ImageSourceType)Random.Range(0, System.Enum.GetValues(typeof(ImageSourceType)).Length);
             }
         }

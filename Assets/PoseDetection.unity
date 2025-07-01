@@ -807,6 +807,7 @@ MonoBehaviour:
   _webCamAdaptor: {fileID: 1933723637}
   _videoPlayerAdaptor: {fileID: 431552733}
   _imageSequenceAdaptor: {fileID: 2087331810}
+  _randomlyChange: 1
 --- !u!114 &1067471462 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6540340231260024494, guid: 585d5cb4d0fde2045805fda7581e0bda, type: 3}

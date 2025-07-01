@@ -38,6 +38,7 @@ public class PoseDetectionRefactored : MonoBehaviour
     float m_TextureWidth;
     float m_TextureHeight;
     float2x3 personDetectorAffineTransform = new();
+    float2x3 landmarkAffineTransform = new();
 
     // Event Data
     private Vector3[] skeleton = new Vector3[k_NumKeypoints];
@@ -213,13 +214,10 @@ public class PoseDetectionRefactored : MonoBehaviour
     }
     async Awaitable Detect(Texture texture)
     {
-        float2x3 landmarkAffineTransform;
-        float size;
-        //if (m_TextureWidth != texture.width || m_TextureHeight != texture.height)
+        if (m_TextureWidth != texture.width || m_TextureHeight != texture.height)
         {
             m_TextureWidth = texture.width;
             m_TextureHeight = texture.height;
-            size = Mathf.Max(m_TextureWidth, m_TextureHeight);
         }
         if (!_detectPerson)
         {
@@ -227,76 +225,13 @@ public class PoseDetectionRefactored : MonoBehaviour
         }
         else
         {
-            //if (m_TextureWidth != texture.width || m_TextureHeight != texture.height)
-            {
-                // The affine transformation matrix to go from tensor coordinates to image coordinates
-                var scale = size / (float)detectorInputSize;
-                personDetectorAffineTransform = BlazeUtils.mul(BlazeUtils.TranslationMatrix(0.5f * (new Vector2(m_TextureWidth, m_TextureHeight) + new Vector2(-size, size))), BlazeUtils.ScaleMatrix(new Vector2(scale, -scale)));
-            }
-
-            BlazeUtils.SampleImageAffine(texture, m_DetectorInput, personDetectorAffineTransform);
-
-            m_PoseDetectorWorker.Schedule(m_DetectorInput);
-
-            var outputIdxAwaitable = (m_PoseDetectorWorker.PeekOutput(0) as Tensor<int>).ReadbackAndCloneAsync();
-            var outputScoreAwaitable = (m_PoseDetectorWorker.PeekOutput(1) as Tensor<float>).ReadbackAndCloneAsync();
-            var outputBoxAwaitable = (m_PoseDetectorWorker.PeekOutput(2) as Tensor<float>).ReadbackAndCloneAsync();
-
-            using var outputIdx = await outputIdxAwaitable;
-            using var outputScore = await outputScoreAwaitable;
-            using var outputBox = await outputBoxAwaitable;
-
-            float score = outputScore[0];
-            var scorePassesThreshold = score >= scoreThreshold;
-            if (!scorePassesThreshold)
-            {
-                EventsPublisherSimple.Instance.PublishEvent("NoFaceDetected", this, null);
-                EventsPublisherSimple.Instance.PublishEvent("NoPersonDetected", this, null);
-                return;
-            }
-            //SetEnabledForBoundingBoxes(scorePassesThreshold);
-
-            var idx = outputIdx[0];
-
-            var anchorPosition = detectorInputSize * new float2(m_Anchors[idx, 0], m_Anchors[idx, 1]);
-
-            // Extract positions of the resulting bounding box from the AI.
-            float2 boundingBoxCenterOffset = new(outputBox[0, 0, 0], outputBox[0, 0, 1]);
-            float2 topRightBoundingBoxOffset = new(outputBox[0, 0, 0] + 0.5f * outputBox[0, 0, 2], outputBox[0, 0, 1] + 0.5f * outputBox[0, 0, 3]);
-            float2 leftHipOffset = new(outputBox[0, 0, 4 + 2 * 0 + 0], outputBox[0, 0, 4 + 2 * 0 + 1]);
-            float2 rightHipOffset = new(outputBox[0, 0, 4 + 2 * 1 + 0], outputBox[0, 0, 4 + 2 * 1 + 1]);
-
-            var faceCenterImageSpace = BlazeUtils.mul(personDetectorAffineTransform, anchorPosition + boundingBoxCenterOffset);
-            var faceTopRightImageSpace = BlazeUtils.mul(personDetectorAffineTransform, anchorPosition + topRightBoundingBoxOffset);
-            // Determine the rotation of the person based on the first two keyPoints:
-            //    the left and right hips (but different than those determined with the landmarks :-()).
-            var leftHipImageSpace = BlazeUtils.mul(personDetectorAffineTransform, anchorPosition + leftHipOffset);
-            var rightHipImageSpace = BlazeUtils.mul(personDetectorAffineTransform, anchorPosition + rightHipOffset);
-            var delta_ImageSpace = rightHipImageSpace - leftHipImageSpace;
-
-            var dScale = 1.25f;
-            var radius = dScale * math.length(delta_ImageSpace);
-            var theta = math.atan2(delta_ImageSpace.y, delta_ImageSpace.x);
-            var origin2 = new float2(0.5f * landmarkerInputSize, 0.5f * landmarkerInputSize); //(128,128)
-                                                                                              //origin2 = 0.5f * (leftShoulderImageSpace + rightShoulderImageSpace);
-            var scale2 = radius / (0.5f * landmarkerInputSize);
-            landmarkAffineTransform = BlazeUtils.mul(BlazeUtils.mul(BlazeUtils.mul(BlazeUtils.TranslationMatrix(leftHipImageSpace), BlazeUtils.ScaleMatrix(new float2(scale2, -scale2))), BlazeUtils.RotationMatrix(0.5f * Mathf.PI - theta)), BlazeUtils.TranslationMatrix(-origin2));
-
-            var faceBoxSize = 2f * (faceTopRightImageSpace - faceCenterImageSpace);
-
-            Vector3 faceWorldPosition = ImageToWorld(faceCenterImageSpace);
-            float2 boundingBoxHeight = faceBoxSize / m_TextureHeight;
-            Vector3 leftHipPosition = ImageToWorld(leftHipImageSpace);
-            float personDetectionRadius = radius / m_TextureHeight;
-
-            _personBoundingCircle.origin = leftHipPosition;
-            _personBoundingCircle.radius = 0.8f * personDetectionRadius;
-            _faceBoundingBox.faceWorldPosition = faceWorldPosition;
-            _faceBoundingBox.boundingBoxHeight = boundingBoxHeight;
-            EventsPublisherSimple.Instance.PublishEvent("PersonDetected", this, _personBoundingCircle);
-            EventsPublisherSimple.Instance.PublishEvent("FaceDetected", this, _faceBoundingBox);
-            //ShowBoundingBoxes(faceWorldPosition, boundingBoxHeight, leftHipPosition, personDetectionRadius);
+            if (!await DetectPerson(texture)) return;
         }
+        await DetectSkeleton(texture);
+    }
+
+    private async Task DetectSkeleton(Texture texture)
+    {
         if (useGPU)
             BlazeUtils.SampleImageAffine(texture, m_LandmarkerInput, landmarkAffineTransform);
         else
@@ -306,6 +241,78 @@ public class PoseDetectionRefactored : MonoBehaviour
         var landmarksAwaitable = (m_PoseLandmarkerWorker.PeekOutput("Identity") as Tensor<float>).ReadbackAndCloneAsync();
         using var landmarks = await landmarksAwaitable; // (1,195)
         ShowTrackedKeyPoints(landmarkAffineTransform, landmarks);
+    }
+
+    private async Task<bool> DetectPerson(Texture texture)
+    {
+        float size = Mathf.Max(m_TextureWidth, m_TextureHeight);
+        // The affine transformation matrix to go from tensor coordinates to image coordinates
+        var scale = size / (float)detectorInputSize;
+        personDetectorAffineTransform = BlazeUtils.mul(BlazeUtils.TranslationMatrix(0.5f * (new Vector2(m_TextureWidth, m_TextureHeight) + new Vector2(-size, size))), BlazeUtils.ScaleMatrix(new Vector2(scale, -scale)));
+
+        BlazeUtils.SampleImageAffine(texture, m_DetectorInput, personDetectorAffineTransform);
+
+        m_PoseDetectorWorker.Schedule(m_DetectorInput);
+
+        var outputIdxAwaitable = (m_PoseDetectorWorker.PeekOutput(0) as Tensor<int>).ReadbackAndCloneAsync();
+        var outputScoreAwaitable = (m_PoseDetectorWorker.PeekOutput(1) as Tensor<float>).ReadbackAndCloneAsync();
+        var outputBoxAwaitable = (m_PoseDetectorWorker.PeekOutput(2) as Tensor<float>).ReadbackAndCloneAsync();
+
+        using var outputIdx = await outputIdxAwaitable;
+        using var outputScore = await outputScoreAwaitable;
+        using var outputBox = await outputBoxAwaitable;
+
+        float score = outputScore[0];
+        var scorePassesThreshold = score >= scoreThreshold;
+        if (!scorePassesThreshold)
+        {
+            EventsPublisherSimple.Instance.PublishEvent("NoFaceDetected", this, null);
+            EventsPublisherSimple.Instance.PublishEvent("NoPersonDetected", this, null);
+            return false;
+        }
+        //SetEnabledForBoundingBoxes(scorePassesThreshold);
+
+        var idx = outputIdx[0];
+
+        var anchorPosition = detectorInputSize * new float2(m_Anchors[idx, 0], m_Anchors[idx, 1]);
+
+        // Extract positions of the resulting bounding box from the AI.
+        float2 boundingBoxCenterOffset = new(outputBox[0, 0, 0], outputBox[0, 0, 1]);
+        float2 topRightBoundingBoxOffset = new(outputBox[0, 0, 0] + 0.5f * outputBox[0, 0, 2], outputBox[0, 0, 1] + 0.5f * outputBox[0, 0, 3]);
+        float2 leftHipOffset = new(outputBox[0, 0, 4 + 2 * 0 + 0], outputBox[0, 0, 4 + 2 * 0 + 1]);
+        float2 rightHipOffset = new(outputBox[0, 0, 4 + 2 * 1 + 0], outputBox[0, 0, 4 + 2 * 1 + 1]);
+
+        var faceCenterImageSpace = BlazeUtils.mul(personDetectorAffineTransform, anchorPosition + boundingBoxCenterOffset);
+        var faceTopRightImageSpace = BlazeUtils.mul(personDetectorAffineTransform, anchorPosition + topRightBoundingBoxOffset);
+        // Determine the rotation of the person based on the first two keyPoints:
+        //    the left and right hips (but different than those determined with the landmarks :-()).
+        var leftHipImageSpace = BlazeUtils.mul(personDetectorAffineTransform, anchorPosition + leftHipOffset);
+        var rightHipImageSpace = BlazeUtils.mul(personDetectorAffineTransform, anchorPosition + rightHipOffset);
+        var delta_ImageSpace = rightHipImageSpace - leftHipImageSpace;
+
+        var dScale = 1.25f;
+        var radius = dScale * math.length(delta_ImageSpace);
+        var theta = math.atan2(delta_ImageSpace.y, delta_ImageSpace.x);
+        var origin2 = new float2(0.5f * landmarkerInputSize, 0.5f * landmarkerInputSize); //(128,128)
+                                                                                          //origin2 = 0.5f * (leftShoulderImageSpace + rightShoulderImageSpace);
+        var scale2 = radius / (0.5f * landmarkerInputSize);
+        landmarkAffineTransform = BlazeUtils.mul(BlazeUtils.mul(BlazeUtils.mul(BlazeUtils.TranslationMatrix(leftHipImageSpace), BlazeUtils.ScaleMatrix(new float2(scale2, -scale2))), BlazeUtils.RotationMatrix(0.5f * Mathf.PI - theta)), BlazeUtils.TranslationMatrix(-origin2));
+
+        var faceBoxSize = 2f * (faceTopRightImageSpace - faceCenterImageSpace);
+
+        Vector3 faceWorldPosition = ImageToWorld(faceCenterImageSpace);
+        float2 boundingBoxHeight = faceBoxSize / m_TextureHeight;
+        Vector3 leftHipPosition = ImageToWorld(leftHipImageSpace);
+        float personDetectionRadius = radius / m_TextureHeight;
+
+        _personBoundingCircle.origin = leftHipPosition;
+        _personBoundingCircle.radius = 0.8f * personDetectionRadius;
+        _faceBoundingBox.faceWorldPosition = faceWorldPosition;
+        _faceBoundingBox.boundingBoxHeight = boundingBoxHeight;
+        EventsPublisherSimple.Instance.PublishEvent("PersonDetected", this, _personBoundingCircle);
+        EventsPublisherSimple.Instance.PublishEvent("FaceDetected", this, _faceBoundingBox);
+        //ShowBoundingBoxes(faceWorldPosition, boundingBoxHeight, leftHipPosition, personDetectionRadius);
+        return true;
     }
 
     private void ShowTrackedKeyPoints(float2x3 M2, Tensor<float> landmarks)
