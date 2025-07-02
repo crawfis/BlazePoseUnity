@@ -1,9 +1,18 @@
 # Refactor of Unity's Sample for BlazePose using Unity's Inference Engine
 Unity's sample for [BlazePose](https://github.com/Unity-Technologies/inference-engine-samples/tree/main/BlazeDetectionSample/Pose)
- used a single image. This expands that to a sequence of images, a video and a live webcam feed.
+ used a single image. This expands that to a sequence of images, videos and a live webcam feeds.
 To support these I rewrote the main code to use an Event architecture and separate the concerns of the model and the view in a 
 somewhat MVC framework. The final loops through these 3 types randomly as a stress test. It works fairly well on my PC with a nVidia card,
 but fails occasionally when changing the image source.
+
+In the end, I decided not to use this as it's performance in tracking is much worse than we have using MediaPipe. Particularly for
+the included video file. At first it did not detect a person at all. I was able to get better results by changing the person detection
+threshold to a much lower value and adjusting the dScale (which I renamed to personDetectionScale). Some videos this last parameter needs
+to be smaller while others it needs to be larger.
+
+I believe both are using the same BlazePose model, but one is in onnx format while the other is in byte format. My guess is the face detection
+or finding the ROI is different in my two implementations. MediaPipe has an automatic anchor calculation, while this reads fixed anchors
+from a .csv file. 
 
 ## Project Structure and Architecture
 
@@ -31,6 +40,16 @@ detected poses and keypoints in the Unity scene. These scripts update their visu
   The event-driven design makes it easy to add new image sources or visualization methods by subscribing to relevant events.
 
 This structure improves maintainability, testability, and scalability compared to a monolithic approach.
+
+## Key Features
+- Video support
+- Local video files
+- Web url video files
+- Sequences of images
+- Webcam support
+- Event driven
+- CPU or GPU landmark tracking
+- Two scenes: Regular one (enable the source you want to test). Stress test one cycles through many different sources.
 
 Below is the original readme from Unity's sample.
 

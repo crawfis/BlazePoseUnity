@@ -801,11 +801,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 1026993307}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1f2b074919e56344da8d73b5a0fa608a, type: 3}
+  m_Script: {fileID: 11500000, guid: 8ab08222835a7ae49ba2c993f77a6cf5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _imageSourceTests: []
-  _randomlyChange: 1
+  _imageSourceType: 0
+  _webCamAdaptor: {fileID: 1933723637}
+  _videoPlayerAdaptor: {fileID: 431552733}
+  _imageSequenceAdaptor: {fileID: 2087331810}
+  _randomlyChange: 0
 --- !u!114 &1067471462 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6540340231260024494, guid: 585d5cb4d0fde2045805fda7581e0bda, type: 3}
@@ -1379,11 +1382,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   poseDetector: {fileID: 5022602860645237092, guid: e30d99d4b5cbed1439961d20a00ea84b, type: 3}
-  poseLandmarker: {fileID: 5022602860645237092, guid: 128e114117c53e04faaefa3000561175, type: 3}
+  poseLandmarker: {fileID: 5022602860645237092, guid: 414916b2af2c16a49b64136c181ad542, type: 3}
   anchorsCSV: {fileID: 4900000, guid: 3e88456b82cc63d4b9237f1dc38bad6d, type: 3}
   scoreThreshold: 0.3
-  _detectPerson: 0
-  useGPU: 0
+  _personDetectionScale: 1.25
+  _detectPerson: 1
+  useGPU: 1
 --- !u!1 &1613802045
 GameObject:
   m_ObjectHideFlags: 0

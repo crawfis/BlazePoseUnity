@@ -32,12 +32,15 @@ namespace CrawfisSoftware
 
         private IEnumerator Start()
         {
-            EventsPublisherSimple.Instance.SubscribeToEvent("ImageSourceCompleted", EnableNextImageSource);
             yield return new WaitForSeconds(0.1f); // Video player can take a moment to initialize
             if (_randomlyChange)
             {
                 _imageSourceIndex = Random.Range(0, _imageSourceTests.Length);
                 StartCoroutine(RandomlyChangeImageSource());
+            }
+            else
+            {
+                EventsPublisherSimple.Instance.SubscribeToEvent("ImageSourceCompleted", EnableNextImageSource);
             }
             _imageSourceTests[_imageSourceIndex].SetActive(true);
         }
