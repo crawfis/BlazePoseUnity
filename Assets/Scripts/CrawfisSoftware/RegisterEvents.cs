@@ -14,6 +14,7 @@ namespace CrawfisSoftware.EventManagement
             EventsPublisherSimple.Instance.RegisterEvent("NoFaceDetected");
             EventsPublisherSimple.Instance.RegisterEvent("ImageUpdated");
             EventsPublisherSimple.Instance.RegisterEvent("ImageSourceChanged");
+            EventsPublisherSimple.Instance.RegisterEvent("ImageSourceCompleted");
         }
     }
 }

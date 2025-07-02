@@ -14,6 +14,9 @@ namespace CrawfisSoftware
     internal class VideoPlayerAdaptor : MonoBehaviour
     {
         [SerializeField] private VideoPlayer _videoPlayer;
+        [SerializeField] private int _numberOfLoops = 1;
+        private int _currentLoop = 1;
+
         private void Awake()
         {
             if (_videoPlayer == null)
@@ -30,7 +33,9 @@ namespace CrawfisSoftware
             _videoPlayer.prepareCompleted += OnVideoPrepared;
             _videoPlayer.errorReceived += OnVideoError;
             _videoPlayer.frameReady += OnFrameReady;
-            _videoPlayer.isLooping = true;
+            _videoPlayer.loopPointReached += OnLoopPointReached;
+            _currentLoop = 1;
+            _videoPlayer.isLooping = _numberOfLoops > 1 ? true : false;
             _videoPlayer.Play();
             Debug.Log("VideoPlayerAdaptor started.");
         }
@@ -42,6 +47,19 @@ namespace CrawfisSoftware
             Debug.Log("VideoPlayerAdaptor Closed.");
         }
 
+        private void OnLoopPointReached(VideoPlayer source)
+        {
+            _currentLoop++;
+            if (_currentLoop == _numberOfLoops)
+            {
+                _videoPlayer.isLooping = false;
+            }
+            else if (_currentLoop > _numberOfLoops)
+            {
+                EventsPublisherSimple.Instance.PublishEvent("ImageSourceCompleted", this, null);
+            }
+        }
+
         private void OnFrameReady(VideoPlayer source, long frameIdx)
         {
             EventsPublisherSimple.Instance.PublishEvent("ImageUpdated", this, source.texture);
@@ -50,7 +68,7 @@ namespace CrawfisSoftware
         private void OnVideoPrepared(UnityEngine.Video.VideoPlayer source)
         {
             Debug.Log("Video prepared successfully.");
-            _videoPlayer.Play();
+            _videoPlayer.frameReady += OnFrameReady;
         }
         private void OnVideoError(UnityEngine.Video.VideoPlayer source, string message)
         {

@@ -16,6 +16,7 @@ public class PoseDetectionRefactored : MonoBehaviour
     public ModelAsset poseLandmarker;
     public TextAsset anchorsCSV;
     public float scoreThreshold = 0.75f;
+    public float _personDetectionScale = 1.25f;
     public bool _detectPerson = false;
     public bool useGPU = false;
 
@@ -290,7 +291,7 @@ public class PoseDetectionRefactored : MonoBehaviour
         var rightHipImageSpace = BlazeUtils.mul(personDetectorAffineTransform, anchorPosition + rightHipOffset);
         var delta_ImageSpace = rightHipImageSpace - leftHipImageSpace;
 
-        var dScale = 1.25f;
+        var dScale = _personDetectionScale;
         var radius = dScale * math.length(delta_ImageSpace);
         var theta = math.atan2(delta_ImageSpace.y, delta_ImageSpace.x);
         var origin2 = new float2(0.5f * landmarkerInputSize, 0.5f * landmarkerInputSize); //(128,128)

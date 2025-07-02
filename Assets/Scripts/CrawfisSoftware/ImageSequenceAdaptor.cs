@@ -45,7 +45,11 @@ namespace CrawfisSoftware
                 EventsPublisherSimple.Instance.PublishEvent("ImageUpdated", this, _images[imageIndex]);
                 yield return new WaitForSeconds(_timeDelay);
                 imageIndex++;
-                imageIndex %= _images.Count;
+                if (imageIndex >= _images.Count)
+                {
+                    EventsPublisherSimple.Instance.PublishEvent("ImageSourceCompleted", this, null);
+                    imageIndex = 0; // Loop back to the first image
+                }
             }
         }
     }

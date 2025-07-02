@@ -1,12 +1,17 @@
 ﻿using CrawfisSoftware.EventManagement;
 
+using System.Collections;
+
 using UnityEngine;
 using UnityEngine.UI;
 
 public class WebcamAdaptor : MonoBehaviour
 {
-    public int cameraIndex = 0;
+    [SerializeField] private int cameraIndex = 0;
+    [SerializeField] private float _testTime = 3600f; // Duration to test the webcam feed, in seconds
+
     private WebCamTexture webcamTexture;
+    private Coroutine _testCoroutine;
 
     private void OnEnable()
     {
@@ -18,6 +23,7 @@ public class WebcamAdaptor : MonoBehaviour
 
             // Start the webcam feed
             webcamTexture.Play();
+            _testCoroutine = StartCoroutine(StopAfterTime(_testTime));
         }
         else
         {
@@ -40,5 +46,16 @@ public class WebcamAdaptor : MonoBehaviour
         {
             webcamTexture.Stop();
         }
+        if (_testCoroutine != null)
+        {
+            StopCoroutine(_testCoroutine);
+            _testCoroutine = null;
+        }
+    }
+
+    private IEnumerator StopAfterTime(float time)
+    {
+        yield return new WaitForSeconds(time);
+        EventsPublisherSimple.Instance.PublishEvent("ImageSourceCompleted", this, null);
     }
 }
